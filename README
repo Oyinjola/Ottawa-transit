@@ -1,0 +1,58 @@
+# Ottawa Transit Analytics Pipeline
+
+An end-to-end ETL pipeline that ingests GTFS (General Transit Feed Specification) transit data, transforms it through a dimensional model, loads it into a SQLite data warehouse, and exports Power BI-ready CSVs.
+
+## Features
+- **5-stage ETL pipeline**: Extract → Validate → Transform → Load → Aggregate
+- **Dimensional data model**: `dim_routes`, `dim_stops`, `fact_trips`, `fact_vehicle_positions`
+- **Delay analytics**: On-time rate, avg delay, P95 delay, delay classification by period
+- **30-day historical backfill** with realistic rush-hour delay distributions
+- **Real-time vehicle positions** with GPS coordinates
+- **Power BI-ready CSV exports**: route daily KPIs, hourly breakdown, stop performance
+- **REST API** for dashboard consumption
+
+## Run the Pipeline
+
+```bash
+pip install flask flask-cors
+python pipeline.py        # runs full ETL, creates output/
+python app.py             # starts API on :5052
+```
+
+## Output Files (`output/`)
+
+| File | Description |
+|------|-------------|
+| `transit_warehouse.db` | SQLite DW with full dimensional model |
+| `route_daily_kpis.csv` | Daily on-time rate + avg delay per route |
+| `hourly_kpis.csv` | On-time rate by hour of day |
+| `vehicle_positions.csv` | Snapshot of GPS positions |
+| `dim_routes.csv` / `dim_stops.csv` | Dimension tables |
+
+## Data Model
+
+```
+dim_routes ─────┐
+dim_stops  ──┐  ├── fact_trips
+             └──┴── fact_vehicle_positions
+                        │
+                        ▼
+                 agg_route_daily
+                 agg_hourly
+```
+
+## Real Data Integration
+
+Replace the simulation functions with live GTFS-RT:
+
+```python
+import requests
+url = "https://api.octranspo1.com/v2.0/GetNextTripsForStop"
+# See: https://www.octranspo.com/en/plan-your-trip/travel-tools/developers/
+```
+
+## To Open in Power BI
+1. Run `python pipeline.py`
+2. Open Power BI Desktop → Get Data → CSV
+3. Import `route_daily_kpis.csv`, `hourly_kpis.csv`, `dim_routes.csv`
+4. Create relationships on `route_id`

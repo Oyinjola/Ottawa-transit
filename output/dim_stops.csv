@@ -1,0 +1,20 @@
+stop_id,stop_name,lat,lon
+AA010,Bayshore Station,45.348,-75.806
+AA170,Tunney's Pasture Station,45.399,-75.737
+AA490,Pimisi Station,45.413,-75.715
+AA500,Lyon Station,45.421,-75.706
+AA510,Parliament Station,45.426,-75.699
+AA520,Rideau Station,45.426,-75.693
+AA530,uOttawa Station,45.423,-75.682
+AA540,Lees Station,45.416,-75.67
+AA550,Hurdman Station,45.413,-75.654
+AA560,Tremblay Station,45.413,-75.64
+AA570,St-Laurent Station,45.419,-75.618
+AA580,Cyrville Station,45.428,-75.604
+AA590,Blair Station,45.433,-75.588
+BUS01,Carleton University,45.384,-75.696
+BUS02,Billings Bridge,45.38,-75.665
+BUS03,South Keys,45.36,-75.64
+BUS04,Barrhaven Centre,45.28,-75.744
+BUS05,Kanata North,45.341,-75.912
+BUS06,Orléans Town Centre,45.477,-75.505

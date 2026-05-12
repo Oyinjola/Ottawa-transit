@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ottawa Transit Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root {
+    --bg: #f7f7f7;
+    --card: #ffffff;
+    --text: #111111;
+    --muted: #666666;
+    --red: #c1121f;
+    --blue: #2563eb;
+    --black: #111111;
+    --border: #dddddd;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  header {
+    background: var(--black);
+    color: white;
+    padding: 22px 32px;
+    border-bottom: 5px solid var(--red);
+  }
+
+  header h1 {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    color: #cccccc;
+    font-size: 14px;
+  }
+
+  main {
+    padding: 24px 32px;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .card h3 {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .kpi-value {
+    font-size: 30px;
+    font-weight: bold;
+  }
+
+  .red {
+    color: var(--red);
+  }
+
+  .blue {
+    color: var(--blue);
+  }
+
+  .section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .chart-box {
+    height: 320px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    background: #f0f0f0;
+    color: var(--black);
+  }
+
+  tr:hover {
+    background: #fafafa;
+  }
+
+  .status {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .on_time {
+    background: #e6f4ea;
+    color: #137333;
+  }
+
+  .late, .very_late {
+    background: #fdeaea;
+    color: var(--red);
+  }
+
+  .early {
+    background: #e8f0fe;
+    color: var(--blue);
+  }
+
+  footer {
+    padding: 18px 32px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-grid,
+    .section-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Ottawa Transit Analytics</h1>
+  <p>ETL pipeline dashboard for simulated OC Transpo trip, delay, and route performance data</p>
+</header>
+
+<main>
+
+  <section class="kpi-grid">
+    <div class="card">
+      <h3>Total Trips</h3>
+      <div class="kpi-value" id="totalTrips">—</div>
+    </div>
+
+    <div class="card">
+      <h3>On-Time Rate</h3>
+      <div class="kpi-value blue" id="onTimeRate">—</div>
+    </div>
+
+    <div class="card">
+      <h3>Average Delay</h3>
+      <div class="kpi-value red" id="avgDelay">—</div>
+    </div>
+
+    <div class="card">
+      <h3>Total Routes</h3>
+      <div class="kpi-value" id="totalRoutes">—</div>
+    </div>
+  </section>
+
+  <section class="section-grid">
+    <div class="card chart-box">
+      <h3>On-Time Rate by Hour</h3>
+      <canvas id="hourlyChart"></canvas>
+    </div>
+
+    <div class="card chart-box">
+      <h3>Daily Delay Trend</h3>
+      <canvas id="trendChart"></canvas>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Route Performance</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Route</th>
+          <th>Type</th>
+          <th>Trips</th>
+          <th>On-Time Rate</th>
+          <th>Avg Delay</th>
+        </tr>
+      </thead>
+      <tbody id="routesTable"></tbody>
+    </table>
+  </section>
+
+  <br>
+
+  <section class="card">
+    <h3>Recent Vehicle Delay Snapshot</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Vehicle</th>
+          <th>Route</th>
+          <th>Stop</th>
+          <th>Delay</th>
+          <th>Status</th>
+          <th>Period</th>
+        </tr>
+      </thead>
+      <tbody id="vehiclesTable"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<footer>
+  Built with Python, SQLite, Flask, and Chart.js · API running on localhost:5052
+</footer>
+
+<script>
+const API = "http://127.0.0.1:5052";
+
+async function fetchJSON(endpoint) {
+  const res = await fetch(`${API}${endpoint}`);
+  return await res.json();
+}
+
+async function loadKPIs() {
+  const data = await fetchJSON("/api/kpis");
+
+  document.getElementById("totalTrips").textContent =
+    data.total_trips.toLocaleString();
+
+  document.getElementById("onTimeRate").textContent =
+    `${data.on_time_rate}%`;
+
+  document.getElementById("avgDelay").textContent =
+    `${data.avg_delay_s}s`;
+
+  document.getElementById("totalRoutes").textContent =
+    data.total_routes;
+}
+
+async function loadHourlyChart() {
+  const data = await fetchJSON("/api/hourly");
+
+  const labels = data.map(row => `${row.hour}:00`);
+  const onTimeRates = data.map(row => row.on_time_rate);
+
+  new Chart(document.getElementById("hourlyChart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "On-Time Rate (%)",
+        data: onTimeRates,
+        backgroundColor: "#2563eb"
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+}
+
+async function loadTrendChart() {
+  const data = await fetchJSON("/api/trend");
+
+  const labels = data.map(row => row.date);
+  const delays = data.map(row => row.avg_delay_s);
+
+  new Chart(document.getElementById("trendChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Average Delay (seconds)",
+        data: delays,
+        borderColor: "#c1121f",
+        backgroundColor: "rgba(193, 18, 31, 0.12)",
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+async function loadRoutesTable() {
+  const data = await fetchJSON("/api/routes");
+  const tbody = document.getElementById("routesTable");
+
+  tbody.innerHTML = data.map(route => `
+    <tr>
+      <td>${route.route_name}</td>
+      <td>${route.route_type}</td>
+      <td>${route.total_trips.toLocaleString()}</td>
+      <td>${route.on_time_rate}%</td>
+      <td>${route.avg_delay_s}s</td>
+    </tr>
+  `).join("");
+}
+
+async function loadVehiclesTable() {
+  const data = await fetchJSON("/api/vehicles");
+  const tbody = document.getElementById("vehiclesTable");
+
+  tbody.innerHTML = data.slice(0, 20).map(v => `
+    <tr>
+      <td>${v.vehicle_id}</td>
+      <td>${v.route_name}</td>
+      <td>${v.stop_name}</td>
+      <td>${v.delay_minutes} min</td>
+      <td><span class="status ${v.status}">${v.status}</span></td>
+      <td>${v.period}</td>
+    </tr>
+  `).join("");
+}
+
+async function initDashboard() {
+  try {
+    await loadKPIs();
+    await loadHourlyChart();
+    await loadTrendChart();
+    await loadRoutesTable();
+    await loadVehiclesTable();
+  } catch (err) {
+    alert("Could not connect to the Flask API. Make sure you ran python pipeline.py first, then python app.py.");
+    console.error(err);
+  }
+}
+
+initDashboard();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+route_id,route_name,route_type
+1,Rideau-Alta Vista,bus
+2,Alta Vista-South Keys,bus
+7,St-Laurent,bus
+12,Rideau-Rockcliffe,bus
+18,Hurdman-Elmvale,bus
+38,Ottawa East,bus
+40,Heron-Walkley,bus
+95,Transitway Express,bus
+96,Baseline Express,bus
+97,Carleton Express,bus
+O1,Confederation Line,lrt
+O2,Trillium Line,lrt
