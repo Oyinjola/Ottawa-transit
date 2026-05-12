@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sqlite3
 from pathlib import Path
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -94,9 +95,9 @@ def vehicles():
     return jsonify([dict(r) for r in rows])
     return jsonify([dict(r) for r in rows])
 
-
 if __name__ == "__main__":
     if not DB.exists():
         print("Run pipeline.py first to generate the database.")
     else:
-        app.run(debug=True, port=5052)
+        port = int(os.environ.get("PORT", 5052))
+        app.run(host="0.0.0.0", port=port)
